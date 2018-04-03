@@ -61,7 +61,9 @@ init() ->
     ensure_mnesia_running(),
     ensure_mnesia_dir(),
     case is_virgin_node() of
-        true  -> init_from_config();
+        true  ->
+            error_logger:info_msg("Node '~p' first start~n", [node()]),
+            init_from_config();
         false -> NodeType = node_type(),
                  init_db_and_upgrade(cluster_nodes(all), NodeType,
                                      NodeType =:= ram)
@@ -360,6 +362,8 @@ dir() -> mnesia:system_info(directory).
 %% nodes in the cluster already. It also updates the cluster status
 %% file.
 init_db(ClusterNodes, NodeType, CheckOtherNodes) ->
+    error_logger:info_msg("init_db ClusterNodes: ~p, NodeType: ~p, CheckOtherNodes: ~p~n",
+        [ClusterNodes, NodeType, CheckOtherNodes]),
     Nodes = change_extra_db_nodes(ClusterNodes, CheckOtherNodes),
     %% Note that we use `system_info' here and not the cluster status
     %% since when we start the app for the first time the cluster

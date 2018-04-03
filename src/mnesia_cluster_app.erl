@@ -21,7 +21,9 @@
 %% Application callbacks
 %% ===================================================================
 start(normal, []) ->
+    error_logger:info_msg("prepare_cluster_status_files start~n"),
     mnesia_cluster_monitor:prepare_cluster_status_files(),
+    error_logger:info_msg("check_cluster_consistency start~n"),
     mnesia_cluster_utils:check_cluster_consistency(),
 
     {ok, Vsn} = application:get_key(mnesia_cluster, vsn),
@@ -30,8 +32,11 @@ start(normal, []) ->
     {ok, SupPid} = mnesia_cluster_sup:start_link(),
     true = register(mnesia_cluster, self()),
     %% this blocks until wait for tables to be replicated
+
+    error_logger:info_msg("mnesia init start~n"),
     mnesia_cluster_utils:init(),
 
+    error_logger:info_msg("mnesia init end~n"),
     {ok, SupPid}.
 
 stop(_State) ->
