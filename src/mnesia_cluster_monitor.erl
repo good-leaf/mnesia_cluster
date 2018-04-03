@@ -70,7 +70,7 @@ prepare_cluster_status_files() ->
     mnesia_cluster_utils:ensure_mnesia_dir(),
     Corrupt = fun(F) -> throw({error, corrupt_cluster_status_files, F}) end,
     RunningNodes1 = case try_read_file(running_nodes_filename()) of
-                        {ok, [Nodes]} when is_list(Nodes) -> Nodes;
+                        {ok, [Nodes]} when is_list(Nodes) -> pong_node(Nodes);
                         {ok, Other}                       -> Corrupt(Other);
                         {error, enoent}                   -> []
                     end,
@@ -124,6 +124,8 @@ update_cluster_status() ->
 reset_cluster_status() ->
     write_cluster_status({[node()], [node()], [node()]}).
 
+pong_node(Nodes) ->
+    lists:filter(fun(N) -> net_adm:ping(N) == pong end, Nodes).
 %%----------------------------------------------------------------------------
 %% Cluster notifications
 %%----------------------------------------------------------------------------

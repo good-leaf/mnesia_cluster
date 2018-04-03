@@ -369,7 +369,10 @@ init_db(ClusterNodes, NodeType, CheckOtherNodes) ->
     %% since when we start the app for the first time the cluster
     %% status will say we are a disc node but the tables won't be
     %% present yet.
+
     WasDiscNode = mnesia:system_info(use_dir),
+    error_logger:info_msg("init_db change_extra_db_nodes: ~p,WasDiscNode:~p, NodeType:~p",
+        [Nodes, WasDiscNode, NodeType]),
     case {Nodes, WasDiscNode, NodeType} of
         {[], _, ram} ->
             %% Standalone ram node, we don't want that
