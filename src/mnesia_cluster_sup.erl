@@ -28,7 +28,7 @@
 %% ===================================================================
 
 start_link() ->
-    {ok, AppProccess} = application:get_env(mnesia_cluster, app_process, mnesia_cluster),
+    {ok, AppProccess} = application:get_env(mnesia_cluster, app_process),
     supervisor:start_link({local, ?MODULE}, ?MODULE, [AppProccess]).
 
 %% ===================================================================
