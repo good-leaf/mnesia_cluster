@@ -1,0 +1,23 @@
+{application, mnesia_cluster,
+ [
+  {description, "A library to simplify development of Mnesia based systems"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  mnesia
+                 ]},
+  {mod, { mnesia_cluster_app, []}},
+  {modules, []},
+  {env, [
+        %%{table_definition_mod, {M, F, A}} 指定定义的表函数
+        {table_definition_mod, {mnesia_cluster_table, test_defs, []}},
+        {app_process, mnesia_cluster},
+        %% {TryNodes, NodeType}
+        {cluster_nodes, {[], disc}},
+        %%异常处理方式 ignore | autoheal | pause_minority
+        {cluster_partition_handling, pause_minority}
+        
+    ]}
+ ]}.
