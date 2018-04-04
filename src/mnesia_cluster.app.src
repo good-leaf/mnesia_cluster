@@ -17,6 +17,7 @@
         %% {TryNodes, NodeType}
         {cluster_nodes, {[], disc}},
         %%异常处理方式 ignore | autoheal | pause_minority
+        %%pause_minority 集群节点存活比例 > 0.5，最好三台机器，当小于0.5时，集群停止服务，等待回复
         {cluster_partition_handling, pause_minority}
         
     ]}

@@ -62,10 +62,12 @@ init() ->
     ensure_mnesia_dir(),
     case is_virgin_node() of
         true  ->
-            error_logger:info_msg("Node '~p' first start~n", [node()]),
+            error_logger:info_msg("Node ~p first start~n", [node()]),
             init_from_config();
-        false -> NodeType = node_type(),
-                 init_db_and_upgrade(cluster_nodes(all), NodeType,
+        false ->
+            NodeType = node_type(),
+            %%二次连接，联通集群所有节点
+            init_db_and_upgrade(cluster_nodes(all), NodeType,
                                      NodeType =:= ram)
     end,
     %% We intuitively expect the global name server to be synced when
@@ -88,6 +90,7 @@ auto_cluster(TryNodes, NodeType) ->
         {ok, Node} ->
             error_logger:info_msg("Node '~p' selected for auto-clustering~n", [Node]),
             {ok, {_, DiscNodes, _}} = discover_cluster0(Node),
+            %%集群模式下，仅联通磁盘节点
             init_db_and_upgrade(DiscNodes, NodeType, true),
             mnesia_cluster_monitor:notify_joined_cluster();
         none ->
@@ -366,7 +369,7 @@ dir() -> mnesia:system_info(directory).
 init_db(ClusterNodes, NodeType, CheckOtherNodes) ->
     error_logger:info_msg("init_db ClusterNodes: ~p, NodeType: ~p, CheckOtherNodes: ~p~n",
         [ClusterNodes, NodeType, CheckOtherNodes]),
-    Nodes = change_extra_db_nodes(ClusterNodes, CheckOtherNodes),
+    Nodes = wait_change_extra_db_nodes(ClusterNodes, CheckOtherNodes),
     %% Note that we use `system_info' here and not the cluster status
     %% since when we start the app for the first time the cluster
     %% status will say we are a disc node but the tables won't be
@@ -380,10 +383,13 @@ init_db(ClusterNodes, NodeType, CheckOtherNodes) ->
             %% Standalone ram node, we don't want that
             throw({error, cannot_create_standalone_ram_node});
         {[], false, disc} ->
+            %%第一个节点从未启动过，第一次会走到这里
             %% RAM -> disc, starting from scratch
             error_logger:info_msg("RAM -> disc, starting from scratch~n"),
             ok = create_schema();
         {[], true, disc} ->
+            %%不存在远端节点或连接不上 直接强制载入可能导致和远端数据不一致
+            %%找到最后停止的节点，然后强制启动
             %% First disc node up
             error_logger:info_msg("First disc node up~n"),
             maybe_force_load(),
@@ -395,6 +401,7 @@ init_db(ClusterNodes, NodeType, CheckOtherNodes) ->
             ok = mnesia_cluster_table:wait_for_replicated(),
             ok = mnesia_cluster_table:create_local_copy(NodeType)
     end,
+    %%数据一直性检查
     ensure_schema_integrity(),
     mnesia_cluster_monitor:update_cluster_status(),
     ok.
@@ -677,6 +684,17 @@ start_mnesia() ->
 stop_mnesia() ->
     stopped = mnesia:stop(),
     ensure_mnesia_not_running().
+
+wait_change_extra_db_nodes(ClusterNodes0, CheckOtherNodes) ->
+    Nodes = change_extra_db_nodes(ClusterNodes0, CheckOtherNodes),
+    %%如果ClusterNodes /= [], 得到Nodes = [], 考虑远程节点并未启动 wait
+    case nodes_excl_me(ClusterNodes0) /= [] andalso Nodes == [] of
+        true ->
+            timer:sleep(3000),
+            change_extra_db_nodes(ClusterNodes0, CheckOtherNodes);
+        false ->
+            Nodes
+    end.
 
 change_extra_db_nodes(ClusterNodes0, CheckOtherNodes) ->
     ClusterNodes = nodes_excl_me(ClusterNodes0),

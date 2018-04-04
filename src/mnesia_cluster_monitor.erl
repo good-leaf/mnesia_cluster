@@ -32,7 +32,7 @@
          code_change/3]).
 
  %% Utils
--export([all_app_nodes_up/0, run_outside_applications/1, ping_all/0]).
+-export([all_app_nodes_up/0, run_outside_applications/1, ping_all/0, await_cluster_recovery/0]).
 
 -define(SERVER, ?MODULE).
 -define(MNESIA_CLUSTER_UP_RPC_TIMEOUT, 2000).
@@ -365,6 +365,7 @@ handle_dead_node(Node, State = #state{autoheal = Autoheal}) ->
     %% the defined App application we would go down and never come back.
     case application:get_env(mnesia_cluster, cluster_partition_handling) of
         {ok, pause_minority} ->
+            %%集群节点存活比例判断 > 0.5
             case majority() of
                 true  -> ok;
                 false -> await_cluster_recovery()
@@ -393,6 +394,7 @@ run_outside_applications(Fun) ->
     spawn(fun () ->
                   %% If our group leader is inside an application we are about
                   %% to stop, application:stop/1 does not return.
+                  %%io重定向
                   group_leader(whereis(init), self()),
                   %% Ensure only one such process at a time, the
                   %% exit(badarg) is harmless if one is already running
@@ -403,6 +405,8 @@ run_outside_applications(Fun) ->
           end).
 
 wait_for_cluster_recovery() ->
+    %%定时ping集群其他节点，当存活的节点比例>0.5时，启动之前存活的最后一个节点的mnesia。
+    %%存在异常，节点pong，在最后节点Mnesia还未启动时，新启动的节点启动过程中找不到远端同步节点。
     ping_all(),
     case majority() of
         true  -> mnesia_cluster:start();
