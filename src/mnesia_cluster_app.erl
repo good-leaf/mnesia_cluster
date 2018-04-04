@@ -21,9 +21,10 @@
 %% Application callbacks
 %% ===================================================================
 start(normal, []) ->
-    error_logger:info_msg("prepare_cluster_status_files start~n"),
+    error_logger:info_msg("prepare update mnesia status files....~n"),
     mnesia_cluster_monitor:prepare_cluster_status_files(),
-    error_logger:info_msg("check_cluster_consistency start~n"),
+    %%选取活着节点，获取otp版本、应用版本、以及远程节点，检查与本地节点的版本是否一直，本地节点是否在远程节点列表
+    error_logger:info_msg("choose alive remote node, check otp,version,remote node list~n"),
     mnesia_cluster_utils:check_cluster_consistency(),
 
     {ok, Vsn} = application:get_key(mnesia_cluster, vsn),
@@ -33,10 +34,10 @@ start(normal, []) ->
     true = register(mnesia_cluster, self()),
     %% this blocks until wait for tables to be replicated
 
-    error_logger:info_msg("mnesia init start~n"),
+    error_logger:info_msg("local node init....~n"),
     mnesia_cluster_utils:init(),
 
-    error_logger:info_msg("mnesia init end~n"),
+    error_logger:info_msg("local node init finish....~n"),
     {ok, SupPid}.
 
 stop(_State) ->

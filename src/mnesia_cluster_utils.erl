@@ -77,7 +77,9 @@ init() ->
 init_from_config() ->
     {ok, {TryNodes, NodeType}} = application:get_env(mnesia_cluster, cluster_nodes),
     case TryNodes of
-        [] -> init_db_and_upgrade([node()], disc, false);
+        [] ->
+            %%未配置集群节点信息
+            init_db_and_upgrade([node()], disc, false);
         _  -> auto_cluster(TryNodes, NodeType)
     end.
 
@@ -379,13 +381,16 @@ init_db(ClusterNodes, NodeType, CheckOtherNodes) ->
             throw({error, cannot_create_standalone_ram_node});
         {[], false, disc} ->
             %% RAM -> disc, starting from scratch
+            error_lager:info_msg("RAM -> disc, starting from scratch~p"),
             ok = create_schema();
         {[], true, disc} ->
             %% First disc node up
+            error_lager:info_msg("First disc node up~p"),
             maybe_force_load(),
             ok;
         {[_ | _], _, _} ->
             %% Subsequent node in cluster, catch up
+            error_lager:info_msg("Subsequent node in cluster, catch up~p"),
             maybe_force_load(),
             ok = mnesia_cluster_table:wait_for_replicated(),
             ok = mnesia_cluster_table:create_local_copy(NodeType)
@@ -475,8 +480,10 @@ force_load_next_boot() ->
 
 maybe_force_load() ->
     case mnesia_cluster_file:is_file(force_load_filename()) of
-        true  -> mnesia_cluster_table:force_load(),
-                 mnesia_cluster_file:delete(force_load_filename());
+        true  ->
+            error_logger:info_msg("local node force_load~p"),
+            mnesia_cluster_table:force_load(),
+            mnesia_cluster_file:delete(force_load_filename());
         false -> ok
     end.
 
@@ -494,6 +501,7 @@ check_cluster_consistency() ->
             case ordsets:is_subset(ordsets:from_list(cluster_nodes(all)),
                                    ordsets:from_list(RemoteAllNodes)) of
                 true  ->
+                    error_logger:info_msg("local node consistency success~n"),
                     ok;
                 false ->
                     %% We delete the schema here since we think we are
@@ -507,10 +515,13 @@ check_cluster_consistency() ->
                     %% disbanded, we're left with a node with no
                     %% mnesia data that will try to connect to offline
                     %% nodes.
+                    error_logger:warning_msg("local node consistency，node list exception，delete schema....~n"),
                     mnesia:delete_schema([node()])
             end,
+            error_logger:info_msg("update mnesia status files....~n"),
             mnesia_cluster_monitor:write_cluster_status(Status);
         {error, not_found} ->
+            error_logger:warning_msg("local node consistency，remote node empty....~n"),
             ok;
         {error, _} = E ->
             throw(E)
