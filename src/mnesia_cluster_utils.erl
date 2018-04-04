@@ -381,16 +381,16 @@ init_db(ClusterNodes, NodeType, CheckOtherNodes) ->
             throw({error, cannot_create_standalone_ram_node});
         {[], false, disc} ->
             %% RAM -> disc, starting from scratch
-            error_lager:info_msg("RAM -> disc, starting from scratch~n"),
+            error_logger:info_msg("RAM -> disc, starting from scratch~n"),
             ok = create_schema();
         {[], true, disc} ->
             %% First disc node up
-            error_lager:info_msg("First disc node up~n"),
+            error_logger:info_msg("First disc node up~n"),
             maybe_force_load(),
             ok;
         {[_ | _], _, _} ->
             %% Subsequent node in cluster, catch up
-            error_lager:info_msg("Subsequent node in cluster, catch up~n"),
+            error_logger:info_msg("Subsequent node in cluster, catch up~n"),
             maybe_force_load(),
             ok = mnesia_cluster_table:wait_for_replicated(),
             ok = mnesia_cluster_table:create_local_copy(NodeType)
