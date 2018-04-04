@@ -45,6 +45,13 @@ Specifies how the node should react in case of a cluster partition. Three option
 - `pause_minority`: if the node belongs to the minor partition it stops the `mnesia_cluster` and `mnesia` applications. Once the partition is resolved the applications are automatically restarted. 
 - `autoheal`: an elected leader takes over control
 
+### 注意 ###
+- `pause_minority模式：` 集群数最少3台，节点存活比例>0.5集群可用。当=<0.5时，最后一个节点停止mnesia，每隔1秒检测集群其他节点恢复情况，直到节点存活比例>0.5启动mnesia。
+- `集群节点全部停止：` 在mnesia目录下查看nodes_running_at_shutdown文件，确定最后一个停止的节点，touch force_load文件，强制启动。
+
+### 存在问题 ###
+- `节点状态文件写入异常：` could_not_write_file "..../mnesia/cluster_nodes.config"
+- `数据表载入等待超时：` timeout_waiting_for_tables
 
 ## Copyright ##
 
